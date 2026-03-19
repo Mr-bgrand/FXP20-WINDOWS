@@ -49,6 +49,30 @@ Make the UI more compact and intuitive. Reduce wasted space, merge controls into
 
 ---
 
+## Auto-Update + Copy EPC (v1.0.8)
+
+### What was done
+
+Added GitHub Releases auto-update and EPC clipboard copy.
+
+### Changes
+
+| File | What changed |
+|------|-------------|
+| `electron/main.ts` | Added `electron-updater` integration: checks GitHub Releases on startup, exposes `/api/update-status`, `/api/update-download`, `/api/update-install` endpoints. |
+| `web-client/src/App.tsx` | Added update banner (polls `/api/update-status` every 60s), shows Download/Install buttons. Added copy EPC to release notes v1.0.8. |
+| `web-client/src/App.css` | Added `.update-banner`, `.update-btn`, `.update-dismiss`, `.copy-btn` styles. |
+| `web-client/src/components/TagTable.tsx` | Added clipboard copy button next to each EPC (appears on row hover, shows checkmark briefly after copying). |
+| `package.json` | Bumped to 1.0.8. Added `publish` config pointing to `github/Mr-bgrand/FXP20-WINDOWS`. Added `electron-updater` dependency. |
+
+### Release workflow
+
+1. Bump version, rebuild: `npm run electron:build`
+2. Create GitHub Release (e.g. `v1.0.8`), attach `FXP20 RFID Reader Setup 1.0.8.exe` and `latest.yml` from `release/`
+3. Existing app installs detect the new version on next launch
+
+---
+
 ## Review
 
 ### What was built
