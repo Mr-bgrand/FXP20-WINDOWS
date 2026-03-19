@@ -1,18 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { config } from '../config';
-import { Antenna, Zap, ExternalLink, Loader, Check } from 'lucide-react';
+import { Antenna, Zap, ExternalLink, Loader, Check, Pencil } from 'lucide-react';
 
 interface AntennaInfo {
   id: number;
   power: number;
 }
 
-const ANTENNA_LABELS: Record<number, { name: string; type: 'internal' | 'external' }> = {
+const DEFAULT_LABELS: Record<number, { name: string; type: 'internal' | 'external' }> = {
   1: { name: 'Internal', type: 'internal' },
   2: { name: 'External 1', type: 'external' },
   3: { name: 'External 2', type: 'external' },
   4: { name: 'External 3', type: 'external' },
 };
+
+function loadNicknames(): Record<number, string> {
+  try {
+    return JSON.parse(localStorage.getItem('antenna-nicknames') || '{}');
+  } catch { return {}; }
+}
+
+function saveNicknames(nicknames: Record<number, string>) {
+  localStorage.setItem('antenna-nicknames', JSON.stringify(nicknames));
+}
 
 interface AntennaPageProps {
   activeAntennas: Set<number>;
@@ -29,6 +39,9 @@ export function AntennaPage({ activeAntennas }: AntennaPageProps) {
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [nicknames, setNicknames] = useState<Record<number, string>>(loadNicknames);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const fetchAntennas = useCallback(async () => {
     try {
@@ -68,6 +81,27 @@ export function AntennaPage({ activeAntennas }: AntennaPageProps) {
     setSaving(prev => ({ ...prev, [antennaId]: false }));
   };
 
+  const startEditing = (id: number) => {
+    const defaultName = DEFAULT_LABELS[id]?.name || `Antenna ${id}`;
+    setEditingId(id);
+    setEditValue(nicknames[id] || defaultName);
+  };
+
+  const finishEditing = () => {
+    if (editingId === null) return;
+    const trimmed = editValue.trim();
+    const defaultName = DEFAULT_LABELS[editingId]?.name || `Antenna ${editingId}`;
+    const updated = { ...nicknames };
+    if (trimmed && trimmed !== defaultName) {
+      updated[editingId] = trimmed;
+    } else {
+      delete updated[editingId];
+    }
+    setNicknames(updated);
+    saveNicknames(updated);
+    setEditingId(null);
+  };
+
   const powerToDbm = (power: number) => (power / 10).toFixed(1);
 
   const hasChanged = (antenna: AntennaInfo) => {
@@ -87,19 +121,34 @@ export function AntennaPage({ activeAntennas }: AntennaPageProps) {
     <div className="antenna-page">
       <div className="antenna-grid">
         {antennas.map(antenna => {
-          const label = ANTENNA_LABELS[antenna.id] || { name: `Antenna ${antenna.id}`, type: 'external' };
+          const defaults = DEFAULT_LABELS[antenna.id] || { name: `Antenna ${antenna.id}`, type: 'external' };
+          const displayName = nicknames[antenna.id] || defaults.name;
           const isActive = activeAntennas.has(antenna.id);
           const power = localPower[antenna.id] ?? antenna.power;
           const isSaving = saving[antenna.id];
           const isSaved = saved[antenna.id];
+          const isEditing = editingId === antenna.id;
 
           return (
             <div key={antenna.id} className={`antenna-card ${isActive ? 'active' : ''}`}>
               <div className="antenna-card-header">
                 <div className="antenna-id">
-                  {label.type === 'internal' ? <Antenna size={18} /> : <ExternalLink size={18} />}
+                  {defaults.type === 'internal' ? <Antenna size={18} /> : <ExternalLink size={18} />}
                   <div>
-                    <span className="antenna-name">{label.name}</span>
+                    {isEditing ? (
+                      <input
+                        className="antenna-name-input"
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onBlur={finishEditing}
+                        onKeyDown={e => { if (e.key === 'Enter') finishEditing(); if (e.key === 'Escape') setEditingId(null); }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="antenna-name" onClick={() => startEditing(antenna.id)} title="Click to rename">
+                        {displayName} <Pencil size={11} className="edit-hint" />
+                      </span>
+                    )}
                     <span className="antenna-port">Port {antenna.id}</span>
                   </div>
                 </div>

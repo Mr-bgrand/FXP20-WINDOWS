@@ -26,7 +26,7 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
     private static int cmd = 16;
     private static int start = 0;
     private static int length = 0;
-    private static int timeout = 500;
+    private static int timeout = 200;
     private static byte[] filterID = new byte[0];
     private static byte[] filterMask = new byte[0];
     private static byte[] password = new byte[] {0, 0, 0, 0};
@@ -175,10 +175,10 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
                         iterateAndOutputTags(tagCount);
                     }
 
-                    Thread.sleep(50);
+                    Thread.sleep(20);
                 } catch (JposException e) {
                     log("WARN", "readTags error: " + e.getMessage());
-                    try { Thread.sleep(1000); } catch (InterruptedException ie) { break; }
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { break; }
                 } catch (InterruptedException e) {
                     break;
                 }

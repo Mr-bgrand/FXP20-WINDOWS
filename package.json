@@ -1,6 +1,6 @@
 {
   "name": "fxp20-rfid-reader",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Zebra FXP20 RFID Reader Desktop Application",
   "main": "dist-electron/main.js",
   "author": "FXP20 Team",
