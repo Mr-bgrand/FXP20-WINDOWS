@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
@@ -8,6 +9,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 
 const PORT = 4000;
 const isDev = !app.isPackaged;
+
+let updateStatus: { available: boolean; version?: string; downloading?: boolean; downloaded?: boolean; error?: string } = { available: false };
 
 const logLines: string[] = [];
 const MAX_LOG_LINES = 500;
@@ -151,6 +154,26 @@ function startMiddleware(): Promise<void> {
                 res.type('text/plain').send(logLines.join('\n'));
             });
 
+            expressApp.get('/api/update-status', (_req, res) => {
+                res.json({ ...updateStatus, currentVersion: app.getVersion() });
+            });
+
+            expressApp.post('/api/update-download', (_req, res) => {
+                if (!updateStatus.available) {
+                    return res.json({ success: false, message: 'No update available' });
+                }
+                autoUpdater.downloadUpdate().catch(() => {});
+                res.json({ success: true, message: 'Download started' });
+            });
+
+            expressApp.post('/api/update-install', (_req, res) => {
+                if (!updateStatus.downloaded) {
+                    return res.json({ success: false, message: 'Update not downloaded yet' });
+                }
+                res.json({ success: true, message: 'Installing update, app will restart...' });
+                setTimeout(() => autoUpdater.quitAndInstall(false, true), 1000);
+            });
+
             expressApp.get('*', (_req, res) => {
                 res.sendFile(path.join(webClientPath, 'index.html'));
             });
@@ -195,6 +218,44 @@ function startMiddleware(): Promise<void> {
         } catch (error) {
             reject(error);
         }
+    });
+}
+
+function setupAutoUpdater() {
+    if (isDev) {
+        appLog('Skipping auto-updater in dev mode');
+        return;
+    }
+
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('update-available', (info) => {
+        appLog(`Update available: v${info.version}`);
+        updateStatus = { available: true, version: info.version };
+    });
+
+    autoUpdater.on('update-not-available', () => {
+        appLog('App is up to date');
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+        appLog(`Download progress: ${Math.round(progress.percent)}%`);
+        updateStatus = { ...updateStatus, downloading: true };
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        appLog(`Update downloaded: v${info.version}`);
+        updateStatus = { available: true, version: info.version, downloaded: true, downloading: false };
+    });
+
+    autoUpdater.on('error', (err) => {
+        appLog(`Auto-updater error: ${err.message}`);
+        updateStatus = { available: false, error: err.message };
+    });
+
+    autoUpdater.checkForUpdates().catch((err) => {
+        appLog(`Update check failed: ${err.message}`);
     });
 }
 
@@ -300,6 +361,7 @@ if (!gotTheLock) {
             await startMiddleware();
             createTray();
             createWindow();
+            setupAutoUpdater();
         } catch (error) {
             console.error('Failed to start:', error);
             app.quit();

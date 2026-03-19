@@ -5,7 +5,7 @@ import { ControlsPanel } from './components/ControlsPanel';
 import { TagInfo, ReaderStatus } from './types';
 import { config } from './config';
 import {
-  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X,
+  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X, Download, RefreshCw,
 } from 'lucide-react';
 import './App.css';
 
@@ -24,9 +24,17 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.8',
+    date: '2026-03-19',
+    changes: [
+      'Auto-update from GitHub Releases — checks on startup, download + install from UI',
+      'Copy EPC to clipboard button on each tag row',
+    ],
+  },
   {
     version: '1.0.7',
     date: '2026-03-19',
@@ -120,6 +128,33 @@ function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundEnabledRef = useRef(true);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{ available: boolean; version?: string; downloading?: boolean; downloaded?: boolean } | null>(null);
+
+  useEffect(() => {
+    const checkUpdate = async () => {
+      try {
+        const res = await fetch(`${config.apiUrl}/api/update-status`);
+        const data = await res.json();
+        if (data.available) setUpdateInfo(data);
+      } catch { /* ignore */ }
+    };
+    checkUpdate();
+    const interval = setInterval(checkUpdate, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUpdateDownload = async () => {
+    try {
+      await fetch(`${config.apiUrl}/api/update-download`, { method: 'POST' });
+      setUpdateInfo(prev => prev ? { ...prev, downloading: true } : prev);
+    } catch { /* ignore */ }
+  };
+
+  const handleUpdateInstall = async () => {
+    try {
+      await fetch(`${config.apiUrl}/api/update-install`, { method: 'POST' });
+    } catch { /* ignore */ }
+  };
 
   // Reads per second counter
   useEffect(() => {
@@ -199,6 +234,32 @@ function App() {
 
   return (
     <div className="app">
+      {/* Update Banner */}
+      {updateInfo?.available && (
+        <div className="update-banner">
+          <span>
+            <Download size={14} />
+            {updateInfo.downloaded
+              ? `v${updateInfo.version} ready to install`
+              : updateInfo.downloading
+              ? `Downloading v${updateInfo.version}...`
+              : `Update v${updateInfo.version} available`}
+          </span>
+          {updateInfo.downloaded ? (
+            <button className="update-btn" onClick={handleUpdateInstall}>
+              <RefreshCw size={13} /> Restart & Update
+            </button>
+          ) : !updateInfo.downloading ? (
+            <button className="update-btn" onClick={handleUpdateDownload}>
+              <Download size={13} /> Download
+            </button>
+          ) : null}
+          <button className="update-dismiss" onClick={() => setUpdateInfo(null)}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="app-header">
         <div className="header-left">

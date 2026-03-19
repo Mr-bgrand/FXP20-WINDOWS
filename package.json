@@ -1,6 +1,6 @@
 {
   "name": "fxp20-rfid-reader",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Zebra FXP20 RFID Reader Desktop Application",
   "main": "dist-electron/main.js",
   "author": "FXP20 Team",
@@ -20,6 +20,7 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
+    "electron-updater": "^6.8.3",
     "express": "^4.22.1",
     "winston": "^3.19.0",
     "ws": "^8.19.0"
@@ -89,6 +90,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "FXP20 RFID Reader"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Mr-bgrand",
+      "repo": "FXP20-WINDOWS"
     }
   }
 }
