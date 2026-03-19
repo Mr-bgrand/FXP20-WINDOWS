@@ -26,15 +26,22 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.13';
+const APP_VERSION = '1.0.14';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.14',
+    date: '2026-03-17',
+    changes: [
+      'Fix: restored 500ms read timeout — external antennas were not reporting at 200ms',
+    ],
+  },
   {
     version: '1.0.13',
     date: '2026-03-17',
     changes: [
       'Editable antenna nicknames — click name to rename, saved locally',
-      'Faster scanning — reduced read timeout (500→200ms) and loop delay (50→20ms)',
+      'Faster scanning — reduced loop delay (50→20ms)',
     ],
   },
   {

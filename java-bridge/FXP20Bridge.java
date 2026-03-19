@@ -26,7 +26,7 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
     private static int cmd = 16;
     private static int start = 0;
     private static int length = 0;
-    private static int timeout = 200;
+    private static int timeout = 500;
     private static byte[] filterID = new byte[0];
     private static byte[] filterMask = new byte[0];
     private static byte[] password = new byte[] {0, 0, 0, 0};
