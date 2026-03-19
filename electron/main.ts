@@ -181,6 +181,17 @@ function startMiddleware(): Promise<void> {
                 res.type('text/plain').send(logLines.join('\n'));
             });
 
+            expressApp.get('/api/startup', (_req, res) => {
+                const settings = app.getLoginItemSettings();
+                res.json({ enabled: settings.openAtLogin });
+            });
+
+            expressApp.post('/api/startup', (req, res) => {
+                const { enabled } = req.body;
+                app.setLoginItemSettings({ openAtLogin: !!enabled });
+                res.json({ success: true, enabled: !!enabled });
+            });
+
             expressApp.get('/api/update-status', (_req, res) => {
                 res.json({ ...updateStatus, currentVersion: app.getVersion() });
             });

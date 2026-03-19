@@ -6,7 +6,7 @@ import { ControlsPanel } from './components/ControlsPanel';
 import { TagInfo, ReaderStatus } from './types';
 import { config } from './config';
 import {
-  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X, Download, RefreshCw, Antenna,
+  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X, Download, RefreshCw, Antenna, Power,
 } from 'lucide-react';
 import './App.css';
 
@@ -26,9 +26,17 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.0.10';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.10',
+    date: '2026-03-17',
+    changes: [
+      'Improved RSSI signal bars — -66 dBm now shows as decent (3 bars)',
+      'Added RSSI minimum filter to hide weak reads (e.g. type -75)',
+    ],
+  },
   {
     version: '1.0.9',
     date: '2026-03-19',
@@ -143,6 +151,7 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState<{ available: boolean; version?: string; downloading?: boolean; downloaded?: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('tags');
   const [activeAntennas, setActiveAntennas] = useState<Set<number>>(new Set());
+  const [startupEnabled, setStartupEnabled] = useState(false);
 
   useEffect(() => {
     const checkUpdate = async () => {
@@ -156,6 +165,22 @@ function App() {
     const interval = setInterval(checkUpdate, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetch(`${config.apiUrl}/api/startup`).then(r => r.json()).then(d => setStartupEnabled(d.enabled)).catch(() => {});
+  }, []);
+
+  const toggleStartup = async () => {
+    const next = !startupEnabled;
+    try {
+      await fetch(`${config.apiUrl}/api/startup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      });
+      setStartupEnabled(next);
+    } catch { /* ignore */ }
+  };
 
   const handleUpdateDownload = async () => {
     try {
@@ -317,6 +342,9 @@ function App() {
         </div>
 
         <div className="header-right">
+          <button className={`icon-btn ${startupEnabled ? 'icon-btn-active' : ''}`} onClick={toggleStartup} title={startupEnabled ? 'Disable launch at startup' : 'Launch at Windows startup'}>
+            <Power size={16} />
+          </button>
           <button className="icon-btn" onClick={() => setSoundEnabled(s => !s)} title={soundEnabled ? 'Mute beep' : 'Enable beep'}>
             {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
