@@ -196,6 +196,17 @@ function startMiddleware(): Promise<void> {
                 res.json({ ...updateStatus, currentVersion: app.getVersion() });
             });
 
+            expressApp.post('/api/update-check', async (_req, res) => {
+                try {
+                    appLog('Manual update check triggered');
+                    const result = await autoUpdater.checkForUpdates();
+                    res.json({ success: true, updateAvailable: !!result?.updateInfo, version: result?.updateInfo?.version });
+                } catch (err: any) {
+                    appLog(`Manual update check failed: ${err.message}`);
+                    res.json({ success: false, message: err.message });
+                }
+            });
+
             expressApp.post('/api/update-download', (_req, res) => {
                 if (!updateStatus.available) {
                     return res.json({ success: false, message: 'No update available' });
@@ -295,6 +306,13 @@ function setupAutoUpdater() {
     autoUpdater.checkForUpdates().catch((err) => {
         appLog(`Update check failed: ${err.message}`);
     });
+
+    setInterval(() => {
+        appLog('Periodic update check');
+        autoUpdater.checkForUpdates().catch((err) => {
+            appLog(`Periodic update check failed: ${err.message}`);
+        });
+    }, 30 * 60 * 1000);
 }
 
 function createWindow() {

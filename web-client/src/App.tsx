@@ -26,9 +26,17 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.10';
+const APP_VERSION = '1.0.11';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.11',
+    date: '2026-03-17',
+    changes: [
+      'Check for Updates button in header (download arrow icon)',
+      'Auto-updater now rechecks every 30 minutes while app is running',
+    ],
+  },
   {
     version: '1.0.10',
     date: '2026-03-17',
@@ -180,6 +188,18 @@ function App() {
       });
       setStartupEnabled(next);
     } catch { /* ignore */ }
+  };
+
+  const [checking, setChecking] = useState(false);
+  const checkForUpdates = async () => {
+    setChecking(true);
+    try {
+      await fetch(`${config.apiUrl}/api/update-check`, { method: 'POST' });
+      const res = await fetch(`${config.apiUrl}/api/update-status`);
+      const data = await res.json();
+      if (data.available) setUpdateInfo(data);
+    } catch { /* ignore */ }
+    setChecking(false);
   };
 
   const handleUpdateDownload = async () => {
@@ -342,6 +362,9 @@ function App() {
         </div>
 
         <div className="header-right">
+          <button className="icon-btn" onClick={checkForUpdates} disabled={checking} title="Check for updates">
+            <Download size={16} className={checking ? 'spin' : ''} />
+          </button>
           <button className={`icon-btn ${startupEnabled ? 'icon-btn-active' : ''}`} onClick={toggleStartup} title={startupEnabled ? 'Disable launch at startup' : 'Launch at Windows startup'}>
             <Power size={16} />
           </button>

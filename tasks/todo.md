@@ -202,3 +202,26 @@ The standard JPOS `RFIDScanner` interface does not expose RSSI. Added a `getCurr
 ### How it works (RSSI)
 
 The JPOS `readTags()` call internally populates a static `Hashtable<String, rfid.api.TagData>` keyed by EPC hex string. After `readTags()` + `getTagCount()`, we iterate via the JPOS cursor (`firstTag`/`nextTag`/`getCurrentTagID`) as before, but now also look up each EPC in the tag store to get `getPeakRSSI()` and `getAntennaID()`.
+
+---
+
+## RSSI Improvements + RSSI Filter (v1.0.10)
+
+### What was done
+
+Adjusted RSSI signal bar thresholds so typical RFID read values (-60 to -70 dBm) appear as decent signals instead of weak. Added a minimum RSSI filter input so users can hide weak reads.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `web-client/src/components/TagTable.tsx` | Shifted `getRssiClass` thresholds: strong >= -55 (was -40), medium >= -70 (was -55). Shifted `getRssiLevel` bars: 5 bars >= -45 (was -30), 4 >= -55, 3 >= -65, 2 >= -75, 1 otherwise. Added `rssiFilter` state and `Signal` icon. Added RSSI filter input next to EPC filter. Filter logic now excludes tags below the typed RSSI threshold. |
+| `web-client/src/App.css` | Added `.rssi-filter-wrapper .filter-input { width: 150px }` for narrower RSSI input. |
+| `web-client/src/App.tsx` | Bumped `APP_VERSION` to 1.0.10. Added v1.0.10 release notes entry. |
+| `package.json` | Bumped version to 1.0.10. |
+
+### Release
+
+- Built and pushed to GitHub
+- Created release v1.0.10 with correctly named `FXP20-RFID-Reader-Setup-1.0.10.exe` and `latest.yml`
+- Fixed filename mismatch (GitHub converts spaces to dots, but `latest.yml` uses hyphens — uploaded with hyphenated filename to match)
