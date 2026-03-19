@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-electron/
+*.class
+java-bridge/build/
+java-bridge/logs/
+logs/
+.env
+*.log
+release/
+resources/jre/

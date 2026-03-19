@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bg-primary, #0f1419);
+  color: var(--text-primary, #f1f5f9);
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+code { font-family: 'JetBrains Mono', 'Fira Code', monospace; background-color: rgba(0, 212, 170, 0.1); color: var(--accent-primary, #00d4aa); padding: 2px 8px; border-radius: 4px; font-size: 0.875em; }
+button { font-family: inherit; }
+:focus:not(:focus-visible) { outline: none; }
+:focus-visible { outline: 2px solid #00d4aa; outline-offset: 2px; }
