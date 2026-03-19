@@ -1,11 +1,11 @@
 import { spawn, ChildProcess } from 'child_process';
-import { ReaderInterface, TagRead, TagReadCallback } from './readerInterface';
+import { ReaderInterface, TagRead, TagReadCallback, AntennaInfo } from './readerInterface';
 import { config } from '../config';
 import logger from '../logger';
 import path from 'path';
 
 interface JavaBridgeMessage {
-    type: 'tag_read' | 'log' | 'error' | 'status';
+    type: 'tag_read' | 'log' | 'error' | 'status' | 'antenna_config' | 'antenna_power_set';
     timestamp?: string;
     epc?: string;
     rssi?: number;
@@ -15,6 +15,9 @@ interface JavaBridgeMessage {
     message?: string;
     error?: string;
     status?: string;
+    antennas?: AntennaInfo[];
+    antennaId?: number;
+    power?: number;
 }
 
 export class FXP20JposReader implements ReaderInterface {
@@ -25,6 +28,8 @@ export class FXP20JposReader implements ReaderInterface {
     private callbacks: TagReadCallback[] = [];
     private javaProcess?: ChildProcess;
     private buffer: string = '';
+    private pendingAntennaResolve?: (antennas: AntennaInfo[]) => void;
+    private pendingPowerResolve?: () => void;
 
     constructor() {
         logger.info('FXP20JposReader initialized');
@@ -84,6 +89,45 @@ export class FXP20JposReader implements ReaderInterface {
 
         this.bridgeAlive = false;
         this.bridgeReady = false;
+    }
+
+    async getAntennaConfig(): Promise<AntennaInfo[]> {
+        if (!this.bridgeAlive || !this.bridgeReady) {
+            return [
+                { id: 1, power: 270 },
+                { id: 2, power: 270 },
+                { id: 3, power: 270 },
+                { id: 4, power: 270 },
+            ];
+        }
+
+        return new Promise((resolve) => {
+            this.pendingAntennaResolve = resolve;
+            this.sendCommand('ANTENNAS');
+            setTimeout(() => {
+                if (this.pendingAntennaResolve) {
+                    this.pendingAntennaResolve = undefined;
+                    resolve([{ id: 1, power: 270 }, { id: 2, power: 270 }, { id: 3, power: 270 }, { id: 4, power: 270 }]);
+                }
+            }, 3000);
+        });
+    }
+
+    async setAntennaPower(antennaId: number, power: number): Promise<void> {
+        if (!this.bridgeAlive || !this.bridgeReady) {
+            throw new Error('Reader not connected');
+        }
+
+        return new Promise((resolve, reject) => {
+            this.pendingPowerResolve = resolve;
+            this.sendCommand(`SETPOWER ${antennaId} ${power}`);
+            setTimeout(() => {
+                if (this.pendingPowerResolve) {
+                    this.pendingPowerResolve = undefined;
+                    reject(new Error('Timeout setting antenna power'));
+                }
+            }, 3000);
+        });
     }
 
     private async spawnBridge(): Promise<void> {
@@ -209,6 +253,20 @@ export class FXP20JposReader implements ReaderInterface {
                     this.inventoryActive = true;
                 } else if (message.status === 'error') {
                     this.inventoryActive = false;
+                }
+                break;
+
+            case 'antenna_config':
+                if (this.pendingAntennaResolve && message.antennas) {
+                    this.pendingAntennaResolve(message.antennas);
+                    this.pendingAntennaResolve = undefined;
+                }
+                break;
+
+            case 'antenna_power_set':
+                if (this.pendingPowerResolve) {
+                    this.pendingPowerResolve();
+                    this.pendingPowerResolve = undefined;
                 }
                 break;
         }

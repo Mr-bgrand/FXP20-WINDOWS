@@ -150,6 +150,33 @@ function startMiddleware(): Promise<void> {
                 }
             });
 
+            expressApp.get('/reader/antennas', async (_req, res) => {
+                try {
+                    if (reader.getAntennaConfig) {
+                        const antennas = await reader.getAntennaConfig();
+                        res.json({ antennas });
+                    } else {
+                        res.json({ antennas: [] });
+                    }
+                } catch (error: any) {
+                    res.status(500).json({ success: false, message: error.message });
+                }
+            });
+
+            expressApp.post('/reader/antennas', async (req, res) => {
+                try {
+                    const { antennaId, power } = req.body;
+                    if (reader.setAntennaPower) {
+                        await reader.setAntennaPower(antennaId, power);
+                        res.json({ success: true, message: `Antenna ${antennaId} power set to ${power}` });
+                    } else {
+                        res.status(400).json({ success: false, message: 'Antenna power control not supported' });
+                    }
+                } catch (error: any) {
+                    res.status(500).json({ success: false, message: error.message });
+                }
+            });
+
             expressApp.get('/debug/logs', (_req, res) => {
                 res.type('text/plain').send(logLines.join('\n'));
             });

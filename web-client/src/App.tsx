@@ -1,15 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { TagTable } from './components/TagTable';
+import { AntennaPage } from './components/AntennaPage';
 import { ControlsPanel } from './components/ControlsPanel';
 import { TagInfo, ReaderStatus } from './types';
 import { config } from './config';
 import {
-  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X, Download, RefreshCw,
+  Wifi, WifiOff, Trash2, Radio, Activity, Hash, Zap, Sun, Moon, Loader, Volume2, VolumeX, Info, X, Download, RefreshCw, Antenna,
 } from 'lucide-react';
 import './App.css';
 
 type Theme = 'dark' | 'light';
+type AppTab = 'tags' | 'antennas';
 
 function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -24,9 +26,19 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '1.0.9';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.9',
+    date: '2026-03-19',
+    changes: [
+      'Antenna configuration page with per-antenna power sliders (0-30 dBm)',
+      'Tab navigation: Tags | Antennas',
+      'Antenna activity indicators (green dot when tags detected)',
+      'Internal vs external antenna labels',
+    ],
+  },
   {
     version: '1.0.8',
     date: '2026-03-19',
@@ -129,6 +141,8 @@ function App() {
   const soundEnabledRef = useRef(true);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{ available: boolean; version?: string; downloading?: boolean; downloaded?: boolean } | null>(null);
+  const [activeTab, setActiveTab] = useState<AppTab>('tags');
+  const [activeAntennas, setActiveAntennas] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const checkUpdate = async () => {
@@ -171,6 +185,14 @@ function App() {
   useEffect(() => {
     if (!ws.lastMessage) return;
     const tag = ws.lastMessage;
+
+    if (tag.antenna) {
+      setActiveAntennas(prev => {
+        const next = new Set(prev);
+        next.add(tag.antenna!);
+        return next;
+      });
+    }
 
     setTotalReads((prev) => prev + 1);
     setTags((prev) => {
@@ -346,9 +368,23 @@ function App() {
         )}
       </div>
 
+      {/* Tab Bar */}
+      <div className="tab-bar">
+        <button className={`tab-btn ${activeTab === 'tags' ? 'active' : ''}`} onClick={() => setActiveTab('tags')}>
+          <Radio size={14} /> Tags
+        </button>
+        <button className={`tab-btn ${activeTab === 'antennas' ? 'active' : ''}`} onClick={() => setActiveTab('antennas')}>
+          <Antenna size={14} /> Antennas
+        </button>
+      </div>
+
       {/* Main Content */}
       <main className="app-main">
-        <TagTable tags={tags} />
+        {activeTab === 'tags' ? (
+          <TagTable tags={tags} />
+        ) : (
+          <AntennaPage activeAntennas={activeAntennas} />
+        )}
       </main>
 
       {/* Release Notes Modal */}

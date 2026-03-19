@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 /**
  * Bridge between Zebra FXP20 JPOS driver and Node.js middleware.
@@ -193,31 +194,111 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
         outputStatus("connected");
     }
 
+    /** Get the internal rfid.api.Config object via reflection */
+    private Object getInternalConfig() throws Exception {
+        Field serviceField = reader.getClass().getDeclaredField("service115");
+        serviceField.setAccessible(true);
+        Object service = serviceField.get(reader);
+
+        Field readerField = null;
+        Class<?> cls = service.getClass();
+        while (cls != null && readerField == null) {
+            try { readerField = cls.getDeclaredField("myReader"); } catch (NoSuchFieldException e) { cls = cls.getSuperclass(); }
+        }
+        if (readerField == null) throw new Exception("Cannot find myReader field");
+        readerField.setAccessible(true);
+        Object rfidReader = readerField.get(service);
+
+        Field configField = rfidReader.getClass().getField("Config");
+        return configField.get(rfidReader);
+    }
+
     /** Trigger hardware beep via reflection into the JPOS service's internal RFIDReader */
     public void beep() {
         try {
-            Field serviceField = reader.getClass().getDeclaredField("service115");
-            if (serviceField == null) serviceField = reader.getClass().getDeclaredField("service");
-            serviceField.setAccessible(true);
-            Object service = serviceField.get(reader);
-
-            Field readerField = null;
-            Class<?> cls = service.getClass();
-            while (cls != null && readerField == null) {
-                try { readerField = cls.getDeclaredField("myReader"); } catch (NoSuchFieldException e) { cls = cls.getSuperclass(); }
-            }
-            if (readerField == null) { log("WARN", "Cannot find myReader field for beep"); return; }
-            readerField.setAccessible(true);
-            Object rfidReader = readerField.get(service);
-
-            Field configField = rfidReader.getClass().getField("Config");
-            Object config = configField.get(rfidReader);
-
-            java.lang.reflect.Method beepMethod = config.getClass().getMethod("beep", int.class, int.class, int.class, BEEP_VOLUME_LEVEL.class);
+            Object config = getInternalConfig();
+            Method beepMethod = config.getClass().getMethod("beep", int.class, int.class, int.class, BEEP_VOLUME_LEVEL.class);
             beepMethod.invoke(config, 200, 100, 1, BEEP_VOLUME_LEVEL.HIGH);
             log("INFO", "Hardware beep triggered");
         } catch (Exception e) {
             log("WARN", "Hardware beep not available: " + e.getMessage());
+        }
+    }
+
+    /** Query antenna configuration via reflection into Config.Antennas */
+    public void getAntennaConfig() {
+        try {
+            Object config = getInternalConfig();
+
+            Field antennasField = config.getClass().getField("Antennas");
+            Object antennas = antennasField.get(config);
+
+            short[] available = null;
+            try {
+                Method getAvail = antennas.getClass().getMethod("getAvailableAntennas");
+                available = (short[]) getAvail.invoke(antennas);
+            } catch (Exception e) {
+                available = new short[] {1, 2, 3, 4};
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"type\":\"antenna_config\",\"antennas\":[");
+
+            for (int i = 0; i < available.length; i++) {
+                short antId = available[i];
+                int power = 270;
+
+                try {
+                    Method getRfConfig = antennas.getClass().getMethod("getAntennaRfConfig", short.class);
+                    Object rfConfig = getRfConfig.invoke(antennas, antId);
+                    if (rfConfig != null) {
+                        Method getPower = rfConfig.getClass().getMethod("getTransmitPowerIndex");
+                        Object powerVal = getPower.invoke(rfConfig);
+                        power = ((Number) powerVal).intValue();
+                    }
+                } catch (Exception e) {
+                    log("WARN", "Cannot read power for antenna " + antId + ": " + e.getMessage());
+                }
+
+                if (i > 0) sb.append(",");
+                sb.append(String.format("{\"id\":%d,\"power\":%d}", antId, power));
+            }
+
+            sb.append("]}");
+            System.out.println(sb.toString());
+            System.out.flush();
+        } catch (Exception e) {
+            logError("getAntennaConfig failed", e);
+        }
+    }
+
+    /** Set per-antenna transmit power via reflection */
+    public void setAntennaPower(int antennaId, int power) {
+        try {
+            Object config = getInternalConfig();
+
+            Field antennasField = config.getClass().getField("Antennas");
+            Object antennas = antennasField.get(config);
+
+            Method getRfConfig = antennas.getClass().getMethod("getAntennaRfConfig", short.class);
+            Object rfConfig = getRfConfig.invoke(antennas, (short) antennaId);
+
+            if (rfConfig != null) {
+                Method setPower = rfConfig.getClass().getMethod("setTransmitPowerIndex", short.class);
+                setPower.invoke(rfConfig, (short) power);
+
+                Method setRfConfig = antennas.getClass().getMethod("setAntennaRfConfig", short.class, rfConfig.getClass());
+                setRfConfig.invoke(antennas, (short) antennaId, rfConfig);
+
+                String timestamp = dateFormat.format(new Date());
+                System.out.println(String.format(
+                    "{\"type\":\"antenna_power_set\",\"timestamp\":\"%s\",\"antennaId\":%d,\"power\":%d}",
+                    timestamp, antennaId, power));
+                System.out.flush();
+                log("INFO", "Antenna " + antennaId + " power set to " + power);
+            }
+        } catch (Exception e) {
+            logError("setAntennaPower failed for antenna " + antennaId, e);
         }
     }
 
@@ -333,7 +414,10 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
                     String line = stdin.readLine();
                     if (line == null) break;
 
-                    switch (line.trim().toUpperCase()) {
+                    String upper = line.trim().toUpperCase();
+                    String[] parts = upper.split("\\s+");
+
+                    switch (parts[0]) {
                         case "READ":
                             bridge.readTagsByTimer();
                             break;
@@ -349,6 +433,16 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
                             break;
                         case "BEEP":
                             bridge.beep();
+                            break;
+                        case "ANTENNAS":
+                            bridge.getAntennaConfig();
+                            break;
+                        case "SETPOWER":
+                            if (parts.length >= 3) {
+                                bridge.setAntennaPower(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                            } else {
+                                bridge.log("WARN", "Usage: SETPOWER <antennaId> <power>");
+                            }
                             break;
                         case "QUIT":
                             bridge.running = false;
