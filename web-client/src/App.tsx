@@ -26,9 +26,16 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.11';
+const APP_VERSION = '1.0.12';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.12',
+    date: '2026-03-17',
+    changes: [
+      'Update test — if you see this, auto-update works!',
+    ],
+  },
   {
     version: '1.0.11',
     date: '2026-03-17',
