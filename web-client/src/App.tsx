@@ -26,9 +26,16 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.16';
+const APP_VERSION = '1.0.17';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.17',
+    date: '2026-03-20',
+    changes: [
+      'Mobi Solutions logo in app header',
+    ],
+  },
   {
     version: '1.0.16',
     date: '2026-03-20',
@@ -367,7 +374,7 @@ function App() {
       {/* Header */}
       <header className="app-header">
         <div className="header-left">
-          <Radio className="logo-icon" />
+          <img src="/logo.svg" alt="Mobi Solutions" className="company-logo" />
           <span className="logo-title">FXP20</span>
           <button className="version-badge" onClick={() => setShowReleaseNotes(true)} title="View release notes">
             v{APP_VERSION}

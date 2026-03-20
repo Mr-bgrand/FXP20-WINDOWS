@@ -84,7 +84,7 @@ body {
   gap: 0.5rem;
   flex-shrink: 0;
 }
-.logo-icon { width: 24px; height: 24px; color: var(--accent-primary); }
+.company-logo { height: 28px; width: auto; }
 .logo-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; white-space: nowrap; }
 
 .header-stats {
