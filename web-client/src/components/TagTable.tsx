@@ -17,11 +17,16 @@ interface TagTableProps {
   tags: Map<string, TagInfo>;
 }
 
+function getAntennaNicknames(): Record<number, string> {
+  try { return JSON.parse(localStorage.getItem('antenna-nicknames') || '{}'); } catch { return {}; }
+}
+
 export function TagTable({ tags }: TagTableProps) {
   const [filter, setFilter] = useState('');
   const [epcDisplay, setEpcDisplay] = useState<EpcDisplay>('hex');
   const [copiedEpc, setCopiedEpc] = useState<string | null>(null);
   const [rssiFilter, setRssiFilter] = useState('');
+  const antennaNicknames = useMemo(() => getAntennaNicknames(), [tags]);
 
   const copyEpc = useCallback((epc: string) => {
     navigator.clipboard.writeText(epc);
@@ -189,7 +194,7 @@ export function TagTable({ tags }: TagTableProps) {
                       <span className="rssi-value">{tag.lastRssi !== undefined ? `${tag.lastRssi} dBm` : '-'}</span>
                     </div>
                   </td>
-                  <td>{tag.lastAntenna ? `ANT${tag.lastAntenna}` : '-'}</td>
+                  <td>{tag.lastAntenna ? (antennaNicknames[tag.lastAntenna] || `ANT${tag.lastAntenna}`) : '-'}</td>
                 </tr>
               ))}
             </tbody>

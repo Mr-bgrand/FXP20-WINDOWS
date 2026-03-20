@@ -26,9 +26,16 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.15';
+const APP_VERSION = '1.0.16';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.16',
+    date: '2026-03-20',
+    changes: [
+      'Antenna nicknames now show in the Tags table antenna column',
+    ],
+  },
   {
     version: '1.0.15',
     date: '2026-03-17',
