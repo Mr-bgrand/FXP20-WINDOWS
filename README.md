@@ -136,4 +136,4 @@ FXP20-WINDOWS/
 
 ---
 
-*Built by [Mobi Solutions Inc.](https://mobisolutions.com) — Powered by Arrowhead*
+*Built by [Mobi Solutions Inc.](https://mobisolutionsinc.com) — Powered by [Arrowhead](https://arrowheadcorp.com)*
