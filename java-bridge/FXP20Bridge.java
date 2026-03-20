@@ -117,20 +117,40 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
         }
     }
 
-    /** START/STOP Inventory - matches demo app option 2 in operation menu */
+    /** START/STOP Inventory - uses startReadTags (continuous firmware scanning) + poll thread */
     public void startInventory() {
         if (inventoryActive) {
             log("WARN", "Inventory already active");
             return;
         }
 
-        log("INFO", "Starting inventory (startReadTags)...");
+        log("INFO", "Starting inventory (startReadTags + poll)...");
 
         try {
             reader.startReadTags(cmd, filterID, filterMask, start, length, password);
             inventoryActive = true;
             outputStatus("reading");
-            log("INFO", "Inventory started - tags arrive via events");
+            log("INFO", "Continuous scanning started");
+
+            Thread pollThread = new Thread(() -> {
+                while (inventoryActive) {
+                    try {
+                        int tagCount = reader.getTagCount();
+                        if (tagCount > 0) {
+                            iterateAndOutputTags(tagCount);
+                        }
+                        Thread.sleep(150);
+                    } catch (JposException e) {
+                        log("WARN", "Poll error: " + e.getMessage());
+                        try { Thread.sleep(500); } catch (InterruptedException ie) { break; }
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+                log("INFO", "Poll thread stopped");
+            });
+            pollThread.setDaemon(true);
+            pollThread.start();
         } catch (JposException e) {
             logError("startReadTags failed", e);
             outputStatus("error");
@@ -141,6 +161,8 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
         if (!inventoryActive) return;
 
         log("INFO", "Stopping inventory...");
+        inventoryActive = false;
+
         try {
             reader.stopReadTags(password);
             Thread.sleep(100);
@@ -152,7 +174,6 @@ public class FXP20Bridge implements DataListener, ErrorListener, StatusUpdateLis
             log("WARN", "stopReadTags: " + e.getMessage());
         }
 
-        inventoryActive = false;
         outputStatus("connected");
         log("INFO", "Inventory stopped");
     }

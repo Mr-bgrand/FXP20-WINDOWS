@@ -42,7 +42,7 @@ export class FXP20JposReader implements ReaderInterface {
         }
 
         if (this.bridgeAlive && this.bridgeReady) {
-            this.sendCommand('CSTART');
+            this.sendCommand('START');
             this.inventoryActive = true;
             return;
         }
@@ -248,8 +248,8 @@ export class FXP20JposReader implements ReaderInterface {
                 logger.info(`Java bridge status: ${message.status}`);
                 if (message.status === 'connected' && !this.bridgeReady) {
                     this.bridgeReady = true;
-                    logger.info('Bridge ready - sending CSTART for continuous reads');
-                    this.sendCommand('CSTART');
+                    logger.info('Bridge ready - sending START for continuous reads');
+                    this.sendCommand('START');
                     this.inventoryActive = true;
                 } else if (message.status === 'error') {
                     this.inventoryActive = false;

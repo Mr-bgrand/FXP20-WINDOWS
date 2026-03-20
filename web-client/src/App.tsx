@@ -26,9 +26,17 @@ function useTheme() {
   return { theme, toggleTheme: () => setTheme((p) => (p === 'dark' ? 'light' : 'dark')) };
 }
 
-const APP_VERSION = '1.0.14';
+const APP_VERSION = '1.0.15';
 
 const RELEASE_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.0.15',
+    date: '2026-03-17',
+    changes: [
+      'Much faster scanning — switched to continuous firmware inventory mode',
+      'Reader scans all antennas nonstop, tags polled every 150ms',
+    ],
+  },
   {
     version: '1.0.14',
     date: '2026-03-17',
